@@ -16,10 +16,20 @@
 <body class="bg-slate-50 min-h-screen">
 
     <div class="max-w-5xl mx-auto py-12 px-4">
-        <!-- Header -->
-        <div class="text-center mb-10">
-            <h1 class="text-3xl font-bold text-slate-800 mb-2">Proses Normalisasi Dapodik BPMP Kalbar 2026</h1>
-            <p class="text-slate-600 text-sm italic">Pembersihan Ganda, Perhitungan Usia, dan Lookup Satuan Pendidikan</p>
+        <!-- Header with Logos -->
+        <div class="flex flex-col items-center mb-10">
+            <div class="flex items-center justify-center space-x-6 mb-6">
+                <!-- Logo Kemendikdasmen -->
+                <img src="Logo Kemendikdasmen BARU.png" alt="Logo Kemendikdasmen" class="h-20 w-auto" onerror="this.style.display='none'">
+                <!-- Logo Tambahan 1 -->
+                <img src="image_7dc36f.png" alt="Logo BPMP" class="h-20 w-auto" onerror="this.style.display='none'">
+                <!-- Logo Tambahan 2 -->
+                <img src="image_7dcf6c.png" alt="Logo Kalbar" class="h-20 w-auto" onerror="this.style.display='none'">
+            </div>
+            <div class="text-center">
+                <h1 class="text-3xl font-bold text-slate-800 mb-2">Proses Normalisasi Dapodik BPMP Kalbar 2026</h1>
+                <p class="text-slate-600 text-sm italic">Pembersihan Ganda, Perhitungan Usia, dan Lookup Satuan Pendidikan</p>
+            </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -163,12 +173,10 @@
                     document.getElementById('info-1').classList.remove('hidden');
                     document.getElementById('name-1').innerText = file.name;
                 } else {
-                    // Create lookup map from satpen file
-                    // Column A (0) as key, Column C (2) as value
                     satpenLookup = {};
                     json.slice(1).forEach(row => {
-                        const key = String(row[0] || "").trim(); // NPSN/Key
-                        if (key) satpenLookup[key] = row[2]; // Bentuk Pendidikan
+                        const key = String(row[0] || "").trim(); 
+                        if (key) satpenLookup[key] = row[2]; 
                     });
                     document.getElementById('prompt-2').classList.add('hidden');
                     document.getElementById('info-2').classList.remove('hidden');
@@ -204,10 +212,8 @@
         }
 
         function runNormalisasi() {
-            // New Headers based on instructions
-            // Original headers + AE, AF, AG, AH, AI, AJ
             const newHeader = [...headerDapodik];
-            while (newHeader.length < 30) newHeader.push(""); // Fill gaps to AE
+            while (newHeader.length < 30) newHeader.push(""); 
             newHeader[30] = "Usia 56";
             newHeader[31] = "Usia 57";
             newHeader[32] = "Usia 58";
@@ -218,14 +224,13 @@
             processedDataRows = [newHeader];
             residuDataRows = [headerDapodik];
 
-            // Indices
-            const idxNIK = 1;        // Kolom B
-            const idxTglLahir = 6;   // Kolom G (YYYY-MM-DD)
-            const idxStatusTugas = 7; // Kolom H
-            const idxNPSN = 9;       // Kolom J
-            const idxPendidikan = 19; // Kolom T
-            const idxSertifikasi = 21;// Kolom V
-            const idxKepegawaian = 22;// Kolom W
+            const idxNIK = 1;        
+            const idxTglLahir = 6;   
+            const idxStatusTugas = 7; 
+            const idxNPSN = 9;       
+            const idxPendidikan = 19; 
+            const idxSertifikasi = 21;
+            const idxKepegawaian = 22;
 
             const nikCountMap = {};
             rawDapodik.forEach(row => {
@@ -238,7 +243,6 @@
                 const nikClean = nikRaw.replace(/\D/g, '');
                 const statusTugasRaw = String(row[idxStatusTugas] || "").toLowerCase();
 
-                // 1. Residu Logic
                 const isNikEmpty = (nikClean === "" || nikRaw === "-" || isNaN(nikClean));
                 const isDuplicate = nikCountMap[nikClean] > 1;
                 const isNonInduk = statusTugasRaw.includes("non") && statusTugasRaw.includes("induk");
@@ -248,42 +252,33 @@
                     return;
                 }
 
-                // 2. Transformation Logic
                 let d = [...row];
                 d[idxStatusTugas] = "Induk";
 
-                // Pendidikan
                 const edu = String(d[idxPendidikan] || "").toUpperCase();
                 const keysHigh = ["S1", "S2", "S3", "D4", "PROFESI"];
                 d[idxPendidikan] = keysHigh.some(k => edu.includes(k)) ? "> S1" : "< S1";
 
-                // Sertifikasi
                 const cert = String(d[idxSertifikasi] || "").trim();
                 d[idxSertifikasi] = (cert === "" || cert.toLowerCase() === "null") ? "Belum Sertifikasi" : "Sudah Sertifikasi";
 
-                // Kepegawaian
                 const emp = String(d[idxKepegawaian] || "").toUpperCase();
                 if (emp.includes("PNS") || emp.includes("CPNS")) {
                     d[idxKepegawaian] = "PNS";
                 } else if (emp.includes("HONOR DAERAH")) {
                     d[idxKepegawaian] = "Honor Daerah";
                 } else if (emp.includes("PPPK") || emp.includes("GTY") || emp.includes("PTY")) {
-                    // Biarkan
                 } else {
                     d[idxKepegawaian] = "Honor Sekolah";
                 }
 
-                // 3. New Columns Logic
                 const age = calculateAge(d[idxTglLahir]);
-                
-                // Usia 56-60 (AE - AI)
                 d[30] = (age === 56) ? 1 : 0;
                 d[31] = (age === 57) ? 1 : 0;
                 d[32] = (age === 58) ? 1 : 0;
                 d[33] = (age === 59) ? 1 : 0;
                 d[34] = (age === 60) ? 1 : 0;
 
-                // 4. Lookup Logic (Bentuk Pendidikan AJ)
                 const npsnKey = String(d[idxNPSN] || "").trim();
                 d[35] = satpenLookup[npsnKey] || "NULL";
 
@@ -318,7 +313,6 @@
             window.location.reload();
         }
 
-        // Downloader
         document.getElementById('downloadClean').onclick = () => {
             const ws = XLSX.utils.aoa_to_sheet(processedDataRows);
             const wb = XLSX.utils.book_new();
